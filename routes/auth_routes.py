@@ -68,19 +68,31 @@ from utils.hash_utils import hash_password, check_password
 from config import SECRET_KEY
 import jwt
 import datetime
+import hashlib
+import qrcode
+import base64
+from io import BytesIO
 
 auth = Blueprint("auth", __name__)
 
+# ───────────────── SIGNUP ─────────────────
 @auth.route("/signup", methods=["POST"])
 def signup():
-    data = request.json or {}
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "No JSON data received"}), 400
 
     role = data.get("role", "user")
-
     email = data.get("email")
     username = data.get("username")
-    pwd = data.get("pwd")
+    pwd = data.get("password")   # ✅ FIXED (was pwd)
 
+    # ✅ Validate required fields
+    if not email or not username or not pwd:
+        return jsonify({"error": "Email, username and password are required"}), 400
+
+    # ✅ Check if already exists
     if find_user_by_email(email):
         return jsonify({"message": "Account already exists"}), 400
 
@@ -92,15 +104,25 @@ def signup():
         "createdAt": datetime.datetime.utcnow()
     }
 
-    # ---- USER EXTRA ----
+    # ───────── USER EXTRA DATA ─────────
     if role == "user":
+        # Generate hash automatically
+        unique_string = email + str(datetime.datetime.utcnow())
+        generated_hash = hashlib.sha256(unique_string.encode()).hexdigest()
+
+        # Generate QR code
+        qr = qrcode.make(generated_hash)
+        buffer = BytesIO()
+        qr.save(buffer, format="PNG")
+        qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+
         user.update({
-            "hash": data.get("hash"),
-            "qrCodeImage": data.get("qrCodeImage"),
-            "reputationScore": data.get("reputationScore", 0)
+            "hash": generated_hash,
+            "qrCodeImage": qr_base64,
+            "reputationScore": 0
         })
 
-    # ---- VALIDATOR EXTRA ----
+    # ───────── VALIDATOR EXTRA DATA ─────────
     if role == "validator":
         user.update({
             "eventsCount": 0,
@@ -113,12 +135,19 @@ def signup():
     return jsonify({"message": f"{role} signup successful"}), 201
 
 
+# ───────────────── LOGIN ─────────────────
 @auth.route("/login", methods=["POST"])
 def login():
-    data = request.json or {}
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "No JSON data received"}), 400
 
     email = data.get("email")
-    pwd = data.get("pwd")
+    pwd = data.get("password")   # ✅ FIXED (was pwd)
+
+    if not email or not pwd:
+        return jsonify({"error": "Email and password required"}), 400
 
     user = find_user_by_email(email)
 
