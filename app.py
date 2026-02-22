@@ -162,6 +162,7 @@ import os
 
 from routes.auth_routes import auth
 from routes.kyc_routes import kyc
+from routes.dashboard_routes import dashboard
 from utils.hash_utils import bcrypt
 from config import db   # ← using your existing MongoDB connection
 
@@ -182,6 +183,7 @@ bcrypt.init_app(app)
 # Register Blueprints
 app.register_blueprint(auth, url_prefix="/api/auth")
 app.register_blueprint(kyc, url_prefix="/api/kyc")
+app.register_blueprint(dashboard, url_prefix="/api/dashboard")
 
 # ───────────────── BASIC ROUTES ─────────────────
 

@@ -1,5 +1,6 @@
 from config import db
 from datetime import datetime
+from config import users_collection
 
 users_collection = db["users"]
 
@@ -49,3 +50,26 @@ def update_user_blockchain(email, wallet_address, encrypted_private_key, commitm
 # ✅ Find user by wallet address (for QR validation use)
 def find_user_by_wallet(wallet_address):
     return users_collection.find_one({"wallet_address": wallet_address})
+
+def create_user(user_data):
+    users_collection.insert_one(user_data)
+
+def find_user_by_email(email):
+    return users_collection.find_one({"email": email})
+
+def update_validator_stats(email, action):
+    if action == "accept":
+        users_collection.update_one(
+            {"email": email},
+            {"$inc": {"acceptedCount": 1}}
+        )
+    elif action == "reject":
+        users_collection.update_one(
+            {"email": email},
+            {"$inc": {"rejectedCount": 1}}
+        )
+    elif action == "event":
+        users_collection.update_one(
+            {"email": email},
+            {"$inc": {"eventsCount": 1}}
+        )
